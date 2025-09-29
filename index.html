@@ -1,289 +1,446 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Jogos — Portal</title>
+  <meta charset="UTF-8" />
+  <title>GitHub Repo Browser</title>
   <style>
-    :root {
-      --bg: #0f1724;
-      --card: #0b1220;
-      --accent: #06b6d4;
-      --muted: #94a3b8
+    :root{
+      --bg:#0f1724; --card:#0b1220; --muted:#98a0b3; --accent:#7c3aed; --glass: rgba(255,255,255,0.03);
+      --success:#10b981; --danger:#ef4444; --surface:#0b1220;
+      font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
     }
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:linear-gradient(180deg,#071028 0%, #071023 60%);color:#e6eef8}
+    .container{max-width:1100px;margin:28px auto;padding:20px}
 
-    * {
-      box-sizing: border-box
-    }
+    header{display:flex;gap:12px;align-items:center;margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+    .controls{display:flex;gap:8px;flex-wrap:wrap}
+    .input, .select{background:var(--glass);border:1px solid rgba(255,255,255,0.04);padding:10px 12px;border-radius:10px;color:inherit}
+    .btn{background:linear-gradient(90deg,var(--accent),#5b21b6);border:none;padding:10px 14px;border-radius:10px;color:white;font-weight:600;cursor:pointer;box-shadow:0 6px 18px rgba(92,33,182,0.18)}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);box-shadow:none}
+    .panel{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border-radius:14px;padding:14px;margin-bottom:14px;border:1px solid rgba(255,255,255,0.03)}
 
-    html,
-    body {
-      height: 100vh;
-      margin: 0;
-      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      color: #e6eef6;
-      background: var(--bg)
-    }
+    .flex{display:flex;gap:12px;align-items:center}
+    .left{flex:1}
 
-    .wrap {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      padding: 18px;
-      gap: 12px
-    }
+    .searchbar{display:flex;gap:8px;align-items:center}
+    .searchbar input{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
 
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between
-    }
+    .filters{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{padding:8px 10px;border-radius:999px;border:1px solid rgba(255,255,255,0.04);cursor:pointer;background:transparent;color:#fff}
+    .chip.active{background:rgba(124,58,237,0.12);border-color:rgba(124,58,237,0.22);color:#fff}
 
-    .brand {
-      font-weight: 700;
-      font-size: 18px
-    }
+    main{display:grid;grid-template-columns:1fr 360px;gap:16px}
+    @media (max-width:900px){main{grid-template-columns:1fr}}
 
-    .controls {
-      display: flex;
-      gap: 8px;
-      align-items: center
-    }
+    .tree{overflow:auto;max-height:68vh;padding:8px}
+    .node{padding:6px 8px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;margin:3px 0}
+    .node.folder{background:linear-gradient(90deg,rgba(255,255,255,0.01),transparent)}
+    .node .meta{display:flex;gap:8px;align-items:center}
+    .caret{width:18px;height:18px;display:inline-grid;place-items:center;cursor:pointer;transform-origin:center;transition:transform .18s}
+    .caret.open{transform:rotate(90deg)}
+    .badge{font-size:12px;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,0.03);color:var(--muted)}
 
-    button,
-    select {
-      background: var(--card);
-      border: 1px solid rgba(255, 255, 255, 0.04);
-      color: inherit;
-      padding: 8px 12px;
-      border-radius: 8px;
-      cursor: pointer
-    }
+    .file-actions a{margin-left:8px;text-decoration:none;color:var(--muted);font-size:13px}
 
-    main {
-      flex: 1;
-      display: grid;
-      grid-template-columns: 20vw 1fr 20vw;
-      gap: 12px
-    }
+    .folder-children{padding-left:18px;margin-top:6px}
 
-    .left,
-    .right {
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.02));
-      padding: 12px;
-      border-radius: 12px;
-      overflow: auto;
-      height: 70vh;
-    }
+    footer.stats{margin-top:12px;display:flex;justify-content:space-between;align-items:center}
 
-    .game-btn {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px;
-      border-radius: 8px;
-      margin-bottom: 8px;
-      cursor: pointer;
-      border: 1px solid rgba(255, 255, 255, 0.02);
-    }
+    /* categories view */
+    .categories{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+    .cat-card{padding:12px;border-radius:10px;background:rgba(255,255,255,0.02);display:flex;flex-direction:column;gap:8px}
+    .cat-title{font-weight:700;color:#e6eef8}
+    .muted{color:var(--muted);font-size:13px}
 
-    .game-btn:hover {
-      outline: 2px solid rgba(6, 182, 212, 0.08)
-    }
+    /* file row */
+    .file-row{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:8px}
+    .file-row .right{display:flex;align-items:center;gap:10px}
+    .file-row .name{font-weight:600}
+    .file-row .path{font-size:12px;color:var(--muted)}
 
-    .preview {
-      font-size: 12px;
-      color: var(--muted)
-    }
+    /* green links */
+    a.btn-green{color:var(--success);font-weight:600;text-decoration:none}
+    a.btn-green:hover{text-decoration:underline}
 
-    /* iframe container */
-    .player {
-      background: #000;
-      border-radius: 12px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      min-height: 0;
-    }
-
-    .player-toolbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 12px;
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent)
-    }
-
-    .player-viewport {
-      flex: 1;
-      min-height: 0;
-      position: relative;
-      height: 50%;
-      width: 100%;
-    }
-
-    iframe#gameFrame {
-      height: 100%;
-      width: 100%;
-      object-fit: contain;
-      border: 0;
-      display: block
-    }
-
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.06);
-      border-radius: 8px
-    }
-
-    .hidden {
-      display: none
-    }
-
-    @media (max-width:1080px) {
-
-      main {
-        grid-template-columns: 90vw 90vw 90vw;
-        grid-template-rows: 100vh 60vh 60vh;
-        grid-auto-flow: column;
-      }
-
-      .left {
-        order: 2
-      }
-
-      .right {
-        order: 3
-      }
-    }
+    .empty{padding:30px;text-align:center;color:var(--muted)}
   </style>
 </head>
-
 <body>
-  <div class="wrap">
+  <div class="container">
     <header>
-      <div class="brand">Portal de Jogos</div>
-      <div class="controls">
-        <button id="fsBtn">Tela cheia</button>
-        <button id="openNewTab">Abrir em nova aba</button>
+      <div class="left">
+        <h1>GitHub Repo Browser</h1>
+        <div class="small">Explorando o repositório padrão: <strong>ThonyBr/tudocopia</strong></div>
       </div>
     </header>
 
+    <div class="panel">
+      <div class="flex" style="justify-content:space-between;align-items:center">
+        <div class="searchbar" style="flex:1;max-width:720px">
+          <input id="search" placeholder="Pesquisar por nome ou extensão (ex: index, .js, README)" />
+          <select id="mode" class="select">
+            <option value="folders">Visualização: Pastas</option>
+            <option value="categories">Visualização: Categorias</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="muted">Mostrar:</div>
+          <div id="filterChips" class="filters"></div>
+        </div>
+      </div>
+    </div>
+
     <main>
-      <!-- Lista de jogos -->
-      <aside class="left">
-        <h3>Jogos</h3>
-        <div class="game-btn" data-src="https://brancazx.github.io/jogos/Cobrinh.html">
-          <div>
-            <div><strong>Cobrinha</strong></div>
-            <div class="preview">Cobrinh.html (Snake)</div>
-          </div>
-          <div>▶</div>
-        </div>
-
-        <div class="game-btn" data-src="https://brancazx.github.io/jogos/falling-object-game.html">
-          <div>
-            <div><strong>Space Shooter</strong></div>
-            <div class="preview">falling-object-game.html</div>
-          </div>
-          <div>▶</div>
-        </div>
-
-        <div class="game-btn" data-src="https://brancazx.github.io/jogos/jogoDaVelha.html">
-          <div>
-            <div><strong>Jogo da Velha</strong></div>
-            <div class="preview">jogoDaVelha.html (Tic-Tac-Toe)</div>
-          </div>
-          <div>▶</div>
-        </div>
-      </aside>
-
-      <!-- Player central -->
-      <section class="player">
-        <div class="player-toolbar">
-          <div id="currentTitle">Nenhum jogo carregado</div>
-          <div>
-            <button id="reloadBtn">Recarregar</button>
-            <button id="hideToolbar">Esconder barra</button>
-          </div>
-        </div>
-        <div class="player-viewport">
-          <iframe id="gameFrame" src="" scrolling="no" allowfullscreen></iframe>
+      <section class="panel tree" id="contentArea">
+        <div id="treeRoot">
+          <div class="empty">Carregando repositório padrão…</div>
         </div>
       </section>
 
-      <!-- Tutorial lateral -->
-      <aside class="right">
-        <h3>Tutoriais dos Jogos</h3>
-        <div>
-          <h4>Cobrinha</h4>
-          <p>Utilize as setinhas (direcionais) para mover a cobra, coma todas as maçãs!</p>
+      <aside class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div>
+            <div class="muted">Estatísticas</div>
+            <div id="statsTotal">Arquivos: 0 • Tamanho total: 0 KB</div>
+          </div>
+          <div style="text-align:right">
+            <div class="muted">Visíveis</div>
+            <div id="statsVisible">0 arquivos</div>
+          </div>
         </div>
-        <div>
-          <h4>Space Shooters</h4>
-          <p>Utilize as setinhas para mexer a nave e o espaço para atirar, destrua o máximo de naves que voçê conseguir</p>
-        </div>
-        <div>
-          <h4>Jogo da Velha</h4>
-          <p>Jogue contra o computador ou um amigo. Clique em iniciar primeiro e depois clique em uma célula vazia para colocar X ou O. O objetivo é alinhar
-            três símbolos em linha, coluna ou diagonal.</p>
-        </div>
+        <hr style="margin:12px 0;border:none;border-top:1px solid rgba(255,255,255,0.03)" />
+        <div class="muted">Dicas</div>
+        <ul class="small">
+          <li>Use filtros para isolar tipos (.html, .css, .js, imagens, markdown, json)</li>
+          <li>Clique nas pastas para expandir/colapsar</li>
+          <li>Abra arquivos com o link "Raw" ou visualize .html via <span class="tag">raw.githack.com</span></li>
+        </ul>
       </aside>
     </main>
+
+    <footer class="stats">
+      <div class="small">Feito com ♥ • API do GitHub pública</div>
+      <div class="small">Nota: repositórios muito grandes podem levar à limitação de API.</div>
+    </footer>
   </div>
 
-  <script>
-    const gameBtns = document.querySelectorAll('.game-btn');
-    const iframe = document.getElementById('gameFrame');
-    const currentTitle = document.getElementById('currentTitle');
-    const fsBtn = document.getElementById('fsBtn');
-    const openNewTab = document.getElementById('openNewTab');
-    const reloadBtn = document.getElementById('reloadBtn');
-    const hideToolbar = document.getElementById('hideToolbar');
+<script>
+const CATEGORIES = {
 
-    gameBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const src = btn.getAttribute('data-src');
-        loadGame(src);
-      })
+  
+  html: ['.html','.htm'],
+  css: ['.css'],
+  js: ['.js','.mjs','.cjs'],
+  markdown: ['.md','.markdown','.mdown'],
+  images: ['.png','.jpg','.jpeg','.gif','.svg','.webp','.bmp','.ico'],
+  json: ['.json'],
+  fonts: ['.woff','.woff2','.ttf','.otf'],
+  other: []
+};
+function getCategoryForName(name){
+  const lower = name.toLowerCase();
+  for(const [cat, exts] of Object.entries(CATEGORIES)){
+    for(const e of exts) if(lower.endsWith(e)) return cat;
+  }
+  return 'other';
+}
+
+const DEFAULT_OWNER = "ThonyBr";
+const DEFAULT_REPO = "tudocopia";
+const treeRoot = document.getElementById('treeRoot');
+const searchInput = document.getElementById('search');
+const filterChips = document.getElementById('filterChips');
+const modeSelect = document.getElementById('mode');
+const statsTotal = document.getElementById('statsTotal');
+const statsVisible = document.getElementById('statsVisible');
+
+let repoState = { owner:'', repo:'', branch:'', files:[], tree:{}, visibleFiles:[] };
+let activeFilters = new Set();
+
+function humanSize(bytes){
+  if(bytes<1024) return bytes+' B';
+  if(bytes<1024*1024) return (bytes/1024).toFixed(1)+' KB';
+  return (bytes/1024/1024).toFixed(2)+' MB';
+}
+
+function initFilterChips(){
+  filterChips.innerHTML='';
+  const keys = Object.keys(CATEGORIES);
+  keys.push('all');
+  keys.forEach(k=>{
+    const chip = document.createElement('button');
+    chip.className='chip';
+    chip.textContent = k === 'all' ? 'Todos' : (k[0].toUpperCase()+k.slice(1));
+    chip.dataset.cat = k;
+    chip.addEventListener('click', ()=>{
+      if(k==='all'){ activeFilters.clear(); }
+      else { if(activeFilters.has(k)) activeFilters.delete(k); else activeFilters.add(k); }
+      refreshUI(); updateChips();
+    });
+    filterChips.appendChild(chip);
+  });
+}
+function updateChips(){
+  Array.from(filterChips.children).forEach(ch=>{
+    const k = ch.dataset.cat;
+    if(k==='all'){ ch.classList.toggle('active', activeFilters.size===0); }
+    else ch.classList.toggle('active', activeFilters.has(k));
+  });
+}
+initFilterChips();
+
+searchInput.addEventListener('input', ()=>refreshUI());
+modeSelect.addEventListener('change', ()=>refreshUI());
+
+// Carrega repo: obtém branch padrão e tree recursiva
+async function loadRepository(){
+  const owner = DEFAULT_OWNER;
+  const repo = DEFAULT_REPO;
+  treeRoot.innerHTML = '<div class="empty">Carregando…</div>';
+
+  try{
+    // obter branch padrão
+    const repoResp = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
+    if(!repoResp.ok) throw new Error('Não foi possível obter dados do repositório: '+repoResp.status);
+    const repoJson = await repoResp.json();
+    const branch = repoJson.default_branch || 'main';
+
+    // obter tree recursiva
+    const treeResp = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`);
+    if(!treeResp.ok) throw new Error('Erro ao obter árvore: '+treeResp.status);
+    const treeJson = await treeResp.json();
+    if(!treeJson.tree) throw new Error('Estrutura inesperada recebida.');
+
+    const files = treeJson.tree.filter(item=>item.type==='blob').map(item=>({
+      path:item.path,
+      size:item.size||0,
+      urlRaw: `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${encodeURI(item.path)}`,
+      // <<< usa raw.githack.com para visualização como página
+      urlHtml: `https://raw.githack.com/${owner}/${repo}/${branch}/${encodeURI(item.path)}`,
+      name: item.path.split('/').pop(),
+      folder: item.path.split('/').slice(0,-1).join('/'),
+      ext: (item.path.includes('.') ? '.'+item.path.split('.').pop().toLowerCase() : ''),
+      category: getCategoryForName(item.path)
+    }));
+
+    // montar árvore (igual ao original)
+    const root = { name:'', children: {}, files: [] };
+    files.forEach(f=>{
+      if(!f.folder) root.files.push(f);
+      else{
+        const parts = f.folder.split('/');
+        let node = root;
+        parts.forEach(p=>{
+          node.children[p] = node.children[p] || { name:p, children:{}, files:[] };
+          node = node.children[p];
+        });
+        node.files.push(f);
+      }
     });
 
-    function loadGame(src) {
-      iframe.src = src;
-      currentTitle.textContent = src;
+    repoState = { owner, repo, branch, files, tree:root };
+    activeFilters.clear();
+    searchInput.value='';
+    updateChips();
+    renderTree();
+  }catch(err){
+    treeRoot.innerHTML = `<div class="empty">Erro: ${err.message}</div>`;
+    console.error(err);
+  }
+}
+
+function fileMatchesFilter(file){
+  const q = (searchInput.value||'').trim().toLowerCase();
+  if(q){
+    if(!(file.name.toLowerCase().includes(q) || file.ext.toLowerCase().includes(q) || file.path.toLowerCase().includes(q))) return false;
+  }
+  if(activeFilters.size>0){
+    return activeFilters.has(file.category);
+  }
+  return true;
+}
+
+function collectVisible(files){
+  return files.filter(f=>fileMatchesFilter(f));
+}
+
+function refreshUI(){
+  if(!repoState.files.length) return;
+  renderTree();
+}
+
+function renderTree(){
+  if(modeSelect.value==='categories') renderCategories();
+  else renderFolders();
+}
+
+// Render por pastas (mantendo layout antigo)
+function renderFolders(){
+  treeRoot.innerHTML='';
+  const container = document.createElement('div');
+
+  let visibleCount = 0, visibleSize = 0, totalCount = repoState.files.length, totalSize = repoState.files.reduce((s,f)=>s+f.size,0);
+
+  function renderNode(node, parentEl){
+    const folderName = node.name || '(raiz)';
+    const folderEl = document.createElement('div');
+    folderEl.className='node folder';
+    const left = document.createElement('div'); left.className='meta';
+    const caret = document.createElement('div'); caret.className='caret'; caret.innerHTML='▶';
+    const title = document.createElement('div'); title.innerHTML=`<strong>${folderName}</strong>`;
+    left.appendChild(caret); left.appendChild(title);
+    const right = document.createElement('div'); right.className='small';
+    right.textContent = `${node.files.length} arquivos`;
+    folderEl.appendChild(left); folderEl.appendChild(right);
+
+    const childrenContainer = document.createElement('div'); childrenContainer.className='folder-children'; childrenContainer.style.display='none';
+    caret.addEventListener('click', ()=>{
+      const open = childrenContainer.style.display==='block';
+      childrenContainer.style.display = open ? 'none' : 'block';
+      caret.classList.toggle('open', !open);
+    });
+
+    node.files.forEach(f=>{
+      const visible = fileMatchesFilter(f);
+      if(visible){ visibleCount++; visibleSize+=f.size; }
+      const fileEl = document.createElement('div'); fileEl.className='node file';
+      fileEl.style.opacity = visible?1:0.25; fileEl.title=f.path;
+      const meta = document.createElement('div'); meta.className='meta';
+      const name = document.createElement('div'); name.innerHTML=`${f.name} <div class="muted" style="font-size:12px">${f.path}</div>`;
+      meta.appendChild(name);
+      const actions = document.createElement('div'); actions.className='file-actions';
+      actions.innerHTML = `<span class="badge">${humanSize(f.size)}</span>`+
+                          `<a class="btn-green" href="${f.urlRaw}" target="_blank" rel="noopener noreferrer">Raw</a>`+
+                          `${f.ext==='.html' || f.ext==='.htm' ? `<a class="btn-green" href="${f.urlHtml}" target="_blank" rel="noopener noreferrer">Visualizar</a>` : ''}`;
+      fileEl.appendChild(meta); fileEl.appendChild(actions);
+      childrenContainer.appendChild(fileEl);
+    });
+
+    for(const childName of Object.keys(node.children).sort()){
+      renderNode(node.children[childName], childrenContainer);
     }
 
-    fsBtn.addEventListener('click', async () => {
-      const container = document.querySelector('.player');
-      if (!document.fullscreenElement) {
-        try { await container.requestFullscreen(); }
-        catch (e) { alert('Erro ao entrar em tela cheia: ' + e.message) }
-      } else { document.exitFullscreen(); }
+    parentEl.appendChild(folderEl);
+    parentEl.appendChild(childrenContainer);
+  }
+
+  renderNode(repoState.tree, container);
+  treeRoot.appendChild(container);
+
+  statsTotal.textContent = `Arquivos: ${totalCount} • Tamanho total: ${humanSize(totalSize)}`;
+  statsVisible.textContent = `${visibleCount} arquivos visíveis • ${humanSize(visibleSize)}`;
+}
+
+// Render por categorias (cards por categoria — layout antigo)
+function renderCategories(){
+  treeRoot.innerHTML='';
+  const container = document.createElement('div'); container.className='categories';
+
+  const grouped = {};
+  repoState.files.forEach(f=>{
+    if(!grouped[f.category]) grouped[f.category]=[]; grouped[f.category].push(f);
+  });
+
+  let visibleCount = 0, visibleSize = 0, totalCount = repoState.files.length, totalSize = repoState.files.reduce((s,f)=>s+f.size,0);
+
+  for(const cat of Object.keys(grouped).sort()){
+    const files = grouped[cat];
+    const visibleFiles = collectVisible(files);
+    visibleCount += visibleFiles.length; visibleSize += visibleFiles.reduce((s,f)=>s+f.size,0);
+
+    const card = document.createElement('div'); card.className='cat-card';
+    const title = document.createElement('div'); title.className='cat-title'; title.textContent = `${cat[0].toUpperCase()+cat.slice(1)} (${files.length})`;
+    const list = document.createElement('div'); list.style.display='flex'; list.style.flexDirection='column'; list.style.gap='6px';
+
+    const showList = visibleFiles.length ? visibleFiles : files.slice(0,8);
+    showList.forEach(f=>{
+      const row = document.createElement('div'); row.className='node file'; row.style.justifyContent='space-between';
+      row.innerHTML = `<div><strong>${f.name}</strong><div class="muted path" style="font-size:12px">${f.path}</div></div>`+
+                      `<div style="text-align:right"><div class="badge">${humanSize(f.size)}</div><div style="margin-top:6px">`+
+                      `<a class="btn-green" href="${f.urlRaw}" target="_blank" rel="noopener noreferrer">Raw</a>${(f.ext==='.html'||f.ext==='.htm')?` | <a class="btn-green" href="${f.urlHtml}" target="_blank" rel="noopener noreferrer">Visualizar</a>`:''}</div></div>`;
+      row.style.opacity = fileMatchesFilter(f)?1:0.25;
+      list.appendChild(row);
     });
 
-    openNewTab.addEventListener('click', () => {
-      if (!iframe.src) return alert('Nenhum jogo carregado');
-      window.open(iframe.src, '_blank');
-    });
+    card.appendChild(title); card.appendChild(list);
+    container.appendChild(card);
+  }
 
-    reloadBtn.addEventListener('click', () => { iframe.contentWindow.location.reload(); });
+  treeRoot.appendChild(container);
+  statsTotal.textContent = `Arquivos: ${totalCount} • Tamanho total: ${humanSize(totalSize)}`;
+  statsVisible.textContent = `${visibleCount} arquivos visíveis • ${humanSize(visibleSize)}`;
+}
 
-    hideToolbar.addEventListener('click', () => {
-      const tb = document.querySelector('.player-toolbar');
-      tb.classList.toggle('hidden');
-    });
+// start
+window.addEventListener("DOMContentLoaded", () => {
+  loadRepository();
+});
 
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'f' || e.key === 'F') fsBtn.click();
-    });
-  </script>
+ // === SEU SCRIPT ORIGINAL DO BROWSER AQUI (não alterado) ===
+
+
+    // =========================
+    // Categoria fixa: Links Externos
+    // =========================
+    const externalLinks = [
+      { name: "Lanchovers", url: "https://snack.expo.dev/@thonybr/lanchovers" },
+      { name: "Hello Max", url: "https://snack.expo.dev/@thonybr/hello-max" },
+      { name: "Finanças", url: "https://snack.expo.dev/@thonybr/financas" },
+      { name: "Conversor", url: "https://snack.expo.dev/@thonybr/conversor" },
+    ];
+
+    function renderExternalLinks() {
+      const contentArea = document.getElementById("contentArea");
+      if (!contentArea) return;
+
+      // cria seção separada
+      const section = document.createElement("section");
+      section.className = "panel";
+      section.style.marginTop = "16px";
+
+      const title = document.createElement("h2");
+      title.textContent = "Links Externos";
+      title.style.margin = "0 0 12px 0";
+      title.style.fontSize = "16px";
+      title.style.fontWeight = "700";
+      section.appendChild(title);
+
+      if (externalLinks.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "Nenhum link adicionado.";
+        section.appendChild(empty);
+      } else {
+        externalLinks.forEach(link => {
+          const row = document.createElement("div");
+          row.className = "file-row";
+
+          const left = document.createElement("div");
+          left.className = "left";
+          left.innerHTML = `<div class="name">${link.name}</div><div class="path">[link externo]</div>`;
+
+          const right = document.createElement("div");
+          right.className = "right";
+          right.innerHTML = `<a href="${link.url}" target="_blank" class="btn-green">Visualizar</a>`;
+
+          row.appendChild(left);
+          row.appendChild(right);
+          section.appendChild(row);
+        });
+      }
+
+      // adiciona no final da área de conteúdo
+      contentArea.parentNode.appendChild(section);
+    }
+
+    // chamar no final
+    renderExternalLinks();
+    
+
+</script>
 </body>
-
-
 </html>
+
+
